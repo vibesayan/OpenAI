@@ -1,0 +1,1032 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HALquiz</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/angular.js/1.8.3/angular.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .quiz-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            padding: 40px;
+            max-width: 800px;
+            width: 100%;
+            animation: slideIn 0.6s ease-out;
+            position: relative;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            color: #333;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 1.1em;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 10px;
+            margin: 20px 0;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            border-radius: 10px;
+            transition: width 0.5s ease;
+        }
+
+        .question-card {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 30px;
+            margin: 20px 0;
+            border-left: 5px solid #667eea;
+        }
+
+        .question-text {
+            font-size: 1.3em;
+            color: #333;
+            margin-bottom: 25px;
+            line-height: 1.6;
+        }
+
+        .question-number {
+            background: #667eea;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: bold;
+            margin-bottom: 20px;
+            display: inline-block;
+        }
+
+        .options {
+            display: grid;
+            gap: 15px;
+        }
+
+        .option {
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+        }
+
+        .option:hover {
+            border-color: #667eea;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.2);
+        }
+
+        .option.selected {
+            border-color: #667eea;
+            background: linear-gradient(135deg, #667eea10, #764ba210);
+        }
+
+        .option.correct {
+            border-color: #28a745;
+            background: linear-gradient(135deg, #28a74510, #20c99710);
+        }
+
+        .option.incorrect {
+            border-color: #dc3545;
+            background: linear-gradient(135deg, #dc354510, #e8384610);
+        }
+
+        .option-letter {
+            background: #667eea;
+            color: white;
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-right: 15px;
+            flex-shrink: 0;
+        }
+
+        .option.correct .option-letter {
+            background: #28a745;
+        }
+
+        .option.incorrect .option-letter {
+            background: #dc3545;
+        }
+
+        .option-text {
+            flex: 1;
+            font-size: 1.1em;
+            color: #333;
+        }
+
+        .explanation {
+            background: #e8f4f8;
+            border-left: 4px solid #17a2b8;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+
+        .explanation h4 {
+            color: #17a2b8;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+
+        .explanation p {
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .nav-buttons {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 30px;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+            box-shadow: 0 10px 20px rgba(108, 117, 125, 0.3);
+        }
+
+        .score-display {
+            text-align: center;
+            padding: 40px;
+            background: linear-gradient(135deg, #667eea10, #764ba210);
+            border-radius: 15px;
+            margin: 20px 0;
+        }
+
+        .score-display h2 {
+            color: #333;
+            font-size: 2.5em;
+            margin-bottom: 20px;
+        }
+
+        .score-display p {
+            color: #666;
+            font-size: 1.2em;
+            margin-bottom: 10px;
+        }
+
+        .start-screen {
+            text-align: center;
+            padding: 40px;
+        }
+
+        .start-screen h2 {
+            color: #333;
+            font-size: 2em;
+            margin-bottom: 20px;
+        }
+
+        .start-screen p {
+            color: #666;
+            font-size: 1.1em;
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #e0e0e0;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .file-upload-area {
+            border: 2px dashed #667eea;
+            border-radius: 15px;
+            padding: 30px;
+            text-align: center;
+            background: #f8f9fa;
+            margin: 20px 0;
+            transition: all 0.3s ease;
+        }
+
+        .file-upload-area:hover {
+            border-color: #764ba2;
+            background: #f0f2ff;
+        }
+
+        .file-info {
+            background: #e8f4f8;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 15px 0;
+            border-left: 4px solid #17a2b8;
+            text-align: left;
+        }
+
+        .file-info h4 {
+            color: #17a2b8;
+            margin-bottom: 10px;
+        }
+
+        .file-info p {
+            margin: 5px 0;
+            color: #333;
+        }
+
+        .error-message {
+            color: #dc3545;
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+
+        .success-message {
+            color: #155724;
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+
+        .timer-container {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: white;
+            border: 2px solid #667eea;
+            border-radius: 15px;
+            padding: 15px 20px;
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.2);
+            z-index: 10;
+            min-width: 120px;
+            text-align: center;
+        }
+
+        .timer-label {
+            font-size: 0.9em;
+            color: #666;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+
+        .timer-display {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #667eea;
+            font-family: 'Courier New', monospace;
+        }
+
+        .timer-warning {
+            color: #ff6b35 !important;
+            border-color: #ff6b35 !important;
+            animation: pulse 1s infinite;
+        }
+
+        .timer-danger {
+            color: #dc3545 !important;
+            border-color: #dc3545 !important;
+            animation: pulse 0.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .timer-expired {
+            background: #f8d7da;
+            color: #721c24;
+            border-color: #dc3545;
+        }
+
+        @media (max-width: 768px) {
+            .quiz-container {
+                padding: 20px;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .question-text {
+                font-size: 1.1em;
+            }
+            
+            .nav-buttons {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .timer-container {
+                position: relative;
+                top: 0;
+                right: 0;
+                margin: 0 auto 20px auto;
+                display: inline-block;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app" class="quiz-container">
+        <div class="header">
+            <h1>HALquiz</h1>
+            <p>where Knowledge becomes Power...</p>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loading" class="loading" style="display: none;">
+            <div class="loading-spinner"></div>
+            <p>Processing file...</p>
+        </div>
+
+        <!-- File Selection Screen -->
+        <div id="file-selection" class="start-screen">
+            <h2>Upload Quiz Questions</h2>
+            <p>Please select a Quiz file in comma-separated (CSV) containing your questions.</p>
+            
+            <div class="file-info">
+                <h4>Quiz File Format Requirements:</h4>
+                <p><strong>Required columns:</strong> question, option_a, option_b, correct_answer</p>
+                <p><strong>Optional columns:</strong> option_c, option_d, explanation</p>
+                <p><strong>Example:</strong></p>
+                <p style="font-family: monospace; font-size: 0.9em; background: #f0f0f0; padding: 10px; border-radius: 5px;">
+                    question,option_a,option_b,option_c,option_d,correct_answer,explanation<br>
+                    "What is 2+2?","3","4","5","6","B","Basic addition"
+                </p>
+            </div>
+
+            <div class="file-upload-area">
+                <input type="file" id="csvFile" accept=".csv,.txt,text/csv,text/plain" style="display: none;" />
+                <button class="btn" onclick="selectFile()">Select Quiz File</button>
+                <p style="margin-top: 15px; font-size: 0.9em; color: #666;">
+                    Accepts files with comma-separated values
+                </p>
+            </div>
+
+            <div id="file-error" class="error-message" style="display: none;"></div>
+        </div>
+
+        <!-- Quiz Ready Screen -->
+        <div id="quiz-ready" class="start-screen" style="display: none;">
+            <h2>Quiz Ready!</h2>
+            <div id="file-success" class="success-message"></div>
+            <p><strong>Instructions:</strong> Answer each question by selecting the best option. You'll receive immediate feedback and explanations.</p>
+            
+            <div style="margin-top: 30px;">
+                <button class="btn" onclick="startQuiz()">Start Quiz</button>
+                <button class="btn btn-secondary" onclick="selectNewFile()" style="margin-left: 10px;">Select Different File</button>
+            </div>
+        </div>
+
+        <!-- Quiz Questions -->
+        <div id="quiz-screen" style="display: none;">
+            <!-- Timer -->
+            <div id="timer-container" class="timer-container">
+                <div class="timer-label">Time Remaining</div>
+                <div id="timer-display" class="timer-display">1:00</div>
+            </div>
+
+            <div class="progress-bar">
+                <div id="progress-fill" class="progress-fill" style="width: 0%"></div>
+            </div>
+            
+            <div class="question-card">
+                <div id="question-number" class="question-number"></div>
+                <div id="question-text" class="question-text"></div>
+                
+                <div class="options" id="options-container">
+                    <!-- Options will be dynamically inserted here -->
+                </div>
+
+                <div id="explanation" class="explanation" style="display: none;">
+                    <h4>Explanation:</h4>
+                    <p id="explanation-text"></p>
+                </div>
+
+                <div id="time-expired-message" class="error-message" style="display: none;">
+                    <strong>Time's up!</strong> You can still select an answer, but the timer has expired for this question.
+                </div>
+            </div>
+
+            <div class="nav-buttons">
+                <button class="btn btn-secondary" onclick="previousQuestion()" id="prev-btn" disabled>
+                    Previous
+                </button>
+                <button class="btn" onclick="nextQuestion()" id="next-btn" disabled>
+                    Next Question
+                </button>
+            </div>
+        </div>
+
+        <!-- Results Screen -->
+        <div id="results-screen" class="score-display" style="display: none;">
+            <h2>Quiz Complete!</h2>
+            <p id="final-score"></p>
+            <p id="score-message"></p>
+            <div style="margin-top: 30px;">
+                <button class="btn" onclick="restartQuiz()">Take Quiz Again</button>
+                <button class="btn btn-secondary" onclick="selectNewFile()" style="margin-left: 10px;">Load New Quiz</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let questions = [];
+        let currentQuestionIndex = 0;
+        let userAnswers = {};
+        let score = 0;
+        let showExplanation = false;
+        let questionTimer = null;
+        let timeRemaining = 60; // 60 seconds per question
+        let timerExpired = false;
+
+        // Show/hide screens
+        function showScreen(screenId) {
+            const screens = ['file-selection', 'quiz-ready', 'quiz-screen', 'results-screen', 'loading'];
+            screens.forEach(id => {
+                document.getElementById(id).style.display = 'none';
+            });
+            document.getElementById(screenId).style.display = 'block';
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('file-error');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+
+        function hideError() {
+            document.getElementById('file-error').style.display = 'none';
+        }
+
+        function selectFile() {
+            document.getElementById('csvFile').click();
+        }
+
+        function selectNewFile() {
+            questions = [];
+            currentQuestionIndex = 0;
+            userAnswers = {};
+            score = 0;
+            showExplanation = false;
+            hideError();
+            showScreen('file-selection');
+        }
+
+        // File handling
+        document.getElementById('csvFile').addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (file) {
+                loadCSVFile(file);
+            }
+        });
+
+        function loadCSVFile(file) {
+            showScreen('loading');
+            hideError();
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                try {
+                    const csvData = event.target.result;
+                    console.log('Raw CSV data:', csvData.substring(0, 500)); // Debug log
+                    
+                    if (!csvData || csvData.trim() === '') {
+                        showScreen('file-selection');
+                        showError('The selected file is empty.');
+                        return;
+                    }
+
+                    // Parse CSV with more flexible settings
+                    const parsed = Papa.parse(csvData, {
+                        header: true,
+                        skipEmptyLines: true,
+                        delimiter: '',  // Auto-detect delimiter
+                        quoteChar: '"',
+                        escapeChar: '"',
+                        transformHeader: function(header) {
+                            return header.trim().toLowerCase().replace(/[^a-z0-9_]/g, '_');
+                        },
+                        transform: function(value, field) {
+                            return value ? value.trim() : '';
+                        }
+                    });
+
+                    console.log('Parsed data:', parsed); // Debug log
+                    console.log('Headers found:', parsed.meta.fields); // Debug log
+
+                    if (parsed.errors.length > 0) {
+                        console.error('CSV parsing errors:', parsed.errors);
+                        // Only fail on critical errors
+                        const criticalErrors = parsed.errors.filter(error => 
+                            error.type === 'Delimiter' || error.type === 'Quotes'
+                        );
+                        if (criticalErrors.length > 0) {
+                            showScreen('file-selection');
+                            showError('Error parsing CSV file. Please check the format: ' + criticalErrors[0].message);
+                            return;
+                        }
+                    }
+
+                    // Validate headers with flexible matching
+                    const headers = parsed.meta.fields || [];
+                    console.log('Processing headers:', headers);
+                    
+                    // Map flexible header names
+                    const headerMap = {};
+                    headers.forEach(header => {
+                        const clean = header.toLowerCase().replace(/[^a-z0-9]/g, '');
+                        if (clean.includes('question') || clean === 'q') {
+                            headerMap.question = header;
+                        } else if (clean.includes('optiona') || clean === 'option_a' || clean === 'a') {
+                            headerMap.option_a = header;
+                        } else if (clean.includes('optionb') || clean === 'option_b' || clean === 'b') {
+                            headerMap.option_b = header;
+                        } else if (clean.includes('optionc') || clean === 'option_c' || clean === 'c') {
+                            headerMap.option_c = header;
+                        } else if (clean.includes('optiond') || clean === 'option_d' || clean === 'd') {
+                            headerMap.option_d = header;
+                        } else if (clean.includes('correct') || clean.includes('answer')) {
+                            headerMap.correct_answer = header;
+                        } else if (clean.includes('explanation') || clean.includes('explain')) {
+                            headerMap.explanation = header;
+                        }
+                    });
+
+                    console.log('Header mapping:', headerMap);
+
+                    // Check required columns
+                    if (!headerMap.question || !headerMap.option_a || !headerMap.option_b || !headerMap.correct_answer) {
+                        showScreen('file-selection');
+                        showError('Missing required columns. Need: question, option_a, option_b, correct_answer. Found headers: ' + headers.join(', '));
+                        return;
+                    }
+
+                    // Transform and validate questions
+                    const transformedQuestions = parsed.data.map(function(row, index) {
+                        const transformed = {
+                            question: row[headerMap.question] || '',
+                            option_a: row[headerMap.option_a] || '',
+                            option_b: row[headerMap.option_b] || '',
+                            option_c: row[headerMap.option_c] || '',
+                            option_d: row[headerMap.option_d] || '',
+                            correct_answer: (row[headerMap.correct_answer] || '').toUpperCase(),
+                            explanation: row[headerMap.explanation] || ''
+                        };
+                        console.log('Transformed question ' + (index + 1) + ':', transformed);
+                        return transformed;
+                    });
+
+                    // Filter valid questions
+                    const validQuestions = transformedQuestions.filter(function(row, index) {
+                        const isValid = row.question && row.question.trim() !== '' && 
+                               row.option_a && row.option_a.trim() !== '' &&
+                               row.option_b && row.option_b.trim() !== '' &&
+                               row.correct_answer && row.correct_answer.trim() !== '';
+                        
+                        if (!isValid) {
+                            console.log('Invalid question at row ' + (index + 1) + ':', row);
+                        }
+                        return isValid;
+                    });
+
+                    console.log('Valid questions found:', validQuestions.length);
+
+                    if (validQuestions.length === 0) {
+                        showScreen('file-selection');
+                        showError('No valid questions found in the file. Please check that all required fields are filled.');
+                        return;
+                    }
+
+                    questions = validQuestions;
+                    console.log('Final questions array:', questions);
+                    
+                    document.getElementById('file-success').textContent = 
+                        'Successfully loaded ' + questions.length + ' questions from your Quiz file.';
+                    showScreen('quiz-ready');
+
+                } catch (error) {
+                    console.error('Error in loadCSVFile:', error);
+                    showScreen('file-selection');
+                    showError('Error reading file: ' + error.message);
+                }
+            };
+
+            reader.onerror = function() {
+                showScreen('file-selection');
+                showError('Error reading file. Please try again.');
+            };
+
+            reader.readAsText(file, 'UTF-8');
+        }
+
+        function startQuiz() {
+            currentQuestionIndex = 0;
+            userAnswers = {}; // Clear all previous answers and scoring flags
+            score = 0;
+            showExplanation = false;
+            timerExpired = false;
+            showScreen('quiz-screen');
+            displayQuestion();
+        }
+
+        function displayQuestion() {
+            if (!questions || questions.length === 0) {
+                showError('No questions available.');
+                return;
+            }
+
+            const question = questions[currentQuestionIndex];
+            console.log('Displaying question:', currentQuestionIndex, question); // Debug log
+            
+            if (!question) {
+                showError('Question not found at index ' + currentQuestionIndex);
+                return;
+            }
+
+            // Reset timer state
+            timerExpired = false;
+            document.getElementById('time-expired-message').style.display = 'none';
+
+            // Update progress
+            const progress = ((currentQuestionIndex) / questions.length) * 100;
+            document.getElementById('progress-fill').style.width = progress + '%';
+            
+            // Update question number and text
+            document.getElementById('question-number').textContent = 
+                'Question ' + (currentQuestionIndex + 1) + ' of ' + questions.length;
+            document.getElementById('question-text').textContent = question.question || 'Question text not available';
+            
+            // Create options
+            const optionsContainer = document.getElementById('options-container');
+            optionsContainer.innerHTML = '';
+            
+            const optionLetters = ['A', 'B', 'C', 'D'];
+            let optionsCreated = 0;
+            
+            optionLetters.forEach(function(letter) {
+                const optionKey = 'option_' + letter.toLowerCase();
+                const optionText = question[optionKey];
+                
+                console.log('Processing option', letter, ':', optionText); // Debug log
+                
+                if (optionText && optionText.trim() !== '') {
+                    const optionDiv = document.createElement('div');
+                    optionDiv.className = 'option';
+                    optionDiv.setAttribute('data-option', letter);
+                    optionDiv.onclick = function() { selectOption(letter); };
+                    
+                    const letterDiv = document.createElement('div');
+                    letterDiv.className = 'option-letter';
+                    letterDiv.textContent = letter;
+                    
+                    const textDiv = document.createElement('div');
+                    textDiv.className = 'option-text';
+                    textDiv.textContent = optionText;
+                    
+                    optionDiv.appendChild(letterDiv);
+                    optionDiv.appendChild(textDiv);
+                    optionsContainer.appendChild(optionDiv);
+                    
+                    optionsCreated++;
+                }
+            });
+            
+            console.log('Created', optionsCreated, 'options'); // Debug log
+            
+            if (optionsCreated < 2) {
+                showError('Question must have at least 2 options. Found: ' + optionsCreated);
+                return;
+            }
+            
+            // Update navigation buttons
+            document.getElementById('prev-btn').disabled = currentQuestionIndex === 0;
+            document.getElementById('next-btn').disabled = !userAnswers[currentQuestionIndex];
+            document.getElementById('next-btn').textContent = 
+                currentQuestionIndex === questions.length - 1 ? 'Finish Quiz' : 'Next Question';
+            
+            // Hide explanation initially
+            document.getElementById('explanation').style.display = 'none';
+            showExplanation = false;
+            
+            // Restore previous answer if exists
+            if (userAnswers[currentQuestionIndex]) {
+                showExplanation = true;
+                const explanationDiv = document.getElementById('explanation');
+                explanationDiv.style.display = 'block';
+                document.getElementById('explanation-text').textContent = 
+                    question.explanation || 'No explanation provided.';
+                updateOptionStyles();
+                
+                // Stop timer if question already answered
+                stopQuestionTimer();
+            } else {
+                // Start timer for new question
+                startQuestionTimer();
+            }
+        }
+
+        function selectOption(option) {
+            console.log('Option selected:', option); // Debug log
+            
+            // Prevent multiple selections for the same question
+            if (showExplanation) return;
+            
+            // Stop the timer when an option is selected
+            stopQuestionTimer();
+            
+            userAnswers[currentQuestionIndex] = option;
+            showExplanation = true;
+            
+            const question = questions[currentQuestionIndex];
+            const correctAnswer = question.correct_answer ? question.correct_answer.toUpperCase().trim() : '';
+            const userOption = option.toUpperCase().trim();
+            
+            console.log('User answer:', userOption, 'Correct answer:', correctAnswer); // Debug log
+            
+            // Only increment score if this is the first time answering this question
+            if (!userAnswers.hasOwnProperty(currentQuestionIndex + '_scored')) {
+                if (userOption === correctAnswer) {
+                    score++;
+                    userAnswers[currentQuestionIndex + '_scored'] = true;
+                    console.log('Correct answer! Score:', score); // Debug log
+                } else {
+                    userAnswers[currentQuestionIndex + '_scored'] = false;
+                    console.log('Incorrect. Correct was:', correctAnswer); // Debug log
+                }
+            }
+            
+            // Show explanation
+            const explanationDiv = document.getElementById('explanation');
+            explanationDiv.style.display = 'block';
+            document.getElementById('explanation-text').textContent = 
+                question.explanation || 'No explanation provided for this question.';
+            
+            // Update button state
+            document.getElementById('next-btn').disabled = false;
+            
+            updateOptionStyles();
+        }
+
+        function updateOptionStyles() {
+            const question = questions[currentQuestionIndex];
+            const userAnswer = userAnswers[currentQuestionIndex];
+            const correctAnswer = question.correct_answer ? question.correct_answer.toUpperCase().trim() : '';
+            const userOption = userAnswer ? userAnswer.toUpperCase().trim() : '';
+            
+            console.log('Updating styles - User:', userOption, 'Correct:', correctAnswer); // Debug log
+            
+            const options = document.querySelectorAll('.option');
+            options.forEach(function(optionDiv) {
+                const letter = optionDiv.getAttribute('data-option') || 
+                              optionDiv.querySelector('.option-letter').textContent;
+                const optionLetter = letter.toUpperCase().trim();
+                
+                // Reset classes
+                optionDiv.className = 'option';
+                
+                if (optionLetter === correctAnswer) {
+                    optionDiv.classList.add('correct');
+                } else if (optionLetter === userOption && optionLetter !== correctAnswer) {
+                    optionDiv.classList.add('incorrect');
+                } else if (optionLetter === userOption) {
+                    optionDiv.classList.add('selected');
+                }
+            });
+        }
+
+        function nextQuestion() {
+            stopQuestionTimer(); // Stop timer when moving to next question
+            
+            if (currentQuestionIndex < questions.length - 1) {
+                currentQuestionIndex++;
+                displayQuestion();
+            } else {
+                showResults();
+            }
+        }
+
+        function previousQuestion() {
+            stopQuestionTimer(); // Stop timer when going back
+            
+            if (currentQuestionIndex > 0) {
+                currentQuestionIndex--;
+                displayQuestion();
+            }
+        }
+
+        function showResults() {
+            stopQuestionTimer(); // Stop any running timer
+            
+            // Recalculate score to ensure accuracy
+            score = 0;
+            for (let i = 0; i < questions.length; i++) {
+                const userAnswer = userAnswers[i];
+                if (userAnswer) {
+                    const question = questions[i];
+                    const correctAnswer = question.correct_answer ? question.correct_answer.toUpperCase().trim() : '';
+                    const userOption = userAnswer.toUpperCase().trim();
+                    
+                    if (userOption === correctAnswer) {
+                        score++;
+                    }
+                }
+            }
+            
+            console.log('Final score calculation:', score, 'out of', questions.length); // Debug log
+            
+            const percentage = Math.round((score / questions.length) * 100);
+            
+            document.getElementById('final-score').innerHTML = 
+                '<strong>Your Score: ' + score + '/' + questions.length + ' (' + percentage + '%)</strong>';
+            
+            let message;
+            if (percentage >= 90) {
+                message = "🎉 Excellent! You have a strong understanding of the material.";
+            } else if (percentage >= 70) {
+                message = "👍 Good work! You have a solid grasp of the key concepts.";
+            } else if (percentage >= 50) {
+                message = "📚 Not bad! Consider reviewing the explanations to strengthen your knowledge.";
+            } else {
+                message = "📖 Keep studying! Review the explanations and try again to improve your understanding.";
+            }
+            
+            document.getElementById('score-message').textContent = message;
+            showScreen('results-screen');
+        }
+
+        function restartQuiz() {
+            stopQuestionTimer(); // Stop any running timer
+            currentQuestionIndex = 0;
+            userAnswers = {}; // Clear all answers and scoring flags
+            score = 0;
+            showExplanation = false;
+            timerExpired = false;
+            startQuiz();
+        }
+
+        function selectNewFile() {
+            stopQuestionTimer(); // Stop any running timer
+            questions = [];
+            currentQuestionIndex = 0;
+            userAnswers = {};
+            score = 0;
+            showExplanation = false;
+            timerExpired = false;
+            hideError();
+            showScreen('file-selection');
+        }
+
+        // Timer functions
+        function startQuestionTimer() {
+            // Clear any existing timer
+            stopQuestionTimer();
+            
+            // Reset timer state
+            timeRemaining = 60; // 60 seconds
+            timerExpired = false;
+            updateTimerDisplay();
+            
+            // Remove timer classes
+            const timerContainer = document.getElementById('timer-container');
+            timerContainer.classList.remove('timer-warning', 'timer-danger', 'timer-expired');
+            
+            // Start countdown
+            questionTimer = setInterval(function() {
+                timeRemaining--;
+                updateTimerDisplay();
+                
+                if (timeRemaining <= 10 && timeRemaining > 5) {
+                    // Warning state (orange) - last 10 seconds
+                    timerContainer.classList.remove('timer-danger');
+                    timerContainer.classList.add('timer-warning');
+                } else if (timeRemaining <= 5 && timeRemaining > 0) {
+                    // Danger state (red) - last 5 seconds
+                    timerContainer.classList.remove('timer-warning');
+                    timerContainer.classList.add('timer-danger');
+                } else if (timeRemaining <= 0) {
+                    // Time expired
+                    timeRemaining = 0;
+                    timerExpired = true;
+                    updateTimerDisplay();
+                    timerContainer.classList.remove('timer-warning', 'timer-danger');
+                    timerContainer.classList.add('timer-expired');
+                    
+                    // Show time expired message
+                    document.getElementById('time-expired-message').style.display = 'block';
+                    
+                    // Stop the timer
+                    stopQuestionTimer();
+                }
+            }, 1000);
+        }
+
+        function stopQuestionTimer() {
+            if (questionTimer) {
+                clearInterval(questionTimer);
+                questionTimer = null;
+            }
+        }
+
+        function updateTimerDisplay() {
+            const minutes = Math.floor(timeRemaining / 60);
+            const seconds = timeRemaining % 60;
+            const display = minutes + ':' + (seconds < 10 ? '0' : '') + seconds;
+            document.getElementById('timer-display').textContent = display;
+        }
+
+        // Initialize the app
+        showScreen('file-selection');
+    </script>
+</body>
+</html>
